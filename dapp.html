@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/logo.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+
+  <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"
+        type="application/javascript"></script>
+  <!-- <script src="assets/js/ethers-5.2.umd.min.js" type="application/javascript"></script> -->
+
+  <title>DaPP Wallet</title>
+</head>
+<body>
+  <h1>Dapp Wallet</h1>
+ 
+
+   <p> Connected Wallet: <p id="addr"></p> 
+
+  <button style="float: left; width: 150px; border-radius:40px ;font-weight:700px" class="btn-info"  onclick="connectWallet()">Connect Wallet </button>
+  <!-- <button style="float: left; width: 130px; border-radius:40px ;font-weight:700px" class="btn-info" v-on:click.prevent="connectWallet()">Connect Wallet</button> -->
+  <br>
+  <br>
+  <br>
+  <button style="background-color:rgb(169, 169, 241); float: left; width: 100px; height: 30px; border-radius:0px ;font-weight:500px" class="btn-danger" onclick="retrieveBalance()">Balance </button> 
+  
+  <button style="background-color:rgb(192, 241, 169); float: left; width: 100px; height: 30px; border-radius:0px ;font-weight:500px" class="btn-danger" onclick="retrieveBalanceInUsd()">Balance(USD)</button>
+
+  <p id="content"></p>
+  <br>
+  
+  <h4>ETH : </h4>
+  <p id="ETHBal">Your ETH Balance : 0</p>
+  <p id="ETHBalTOUSD">Your ETH Balance (USD): 0</p>
+
+  <h4>LINK : </h4>
+  <p id="LNKBAL">Your LINK Balance: 0</p>
+  <p id="LNKBALTOUSD">Your LINK Balance: 0</p>
+  <br>
+ 
+  <button onclick="depositETH()">Desposit ETH</button>
+  <input id="depositETHf"></input>
+  
+  <br>
+  <br>
+  <button onclick="withdrawETH()">Withdraw ETH</button>
+  <input id="withdrawETHf"></input>
+  
+  <br>
+  <br>
+ 
+  <button onclick="depositLink()">Deposit LINK</button>
+  <input id="depositLNKf"></input>
+  <!-- <input id="depositLNKf"></input> -->
+ 
+  <br>
+  <br>
+  <button onclick="withdrawLink()">Withdraw LINK</button>
+  <input id="withdrawLNKf"></input>
+  
+  <br>
+  <script>
+    //var contractAddress = '0x75bdfFdb6eaE750D002e567902B48D1a21b1A8E0';
+    var contractAddress = '0x8D583079b912DA1dfB260C2743323c5C69Dd9ca8';
+    var linkContractAddr= '0x01BE23585060835E02B77ef475b0Cc51aA1e0709';
+    var contractABI = [
+            {
+              "inputs": [],
+              "stateMutability": "nonpayable",
+              "type": "constructor"
+            },
+            {
+              "inputs": [],
+              "name": "depositETH",
+              "outputs": [],
+              "stateMutability": "payable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "depositLink",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getlatestEthPrice",
+              "outputs": [
+                {
+                  "internalType": "int256",
+                  "name": "",
+                  "type": "int256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [],
+              "name": "getlatestLinkPrice",
+              "outputs": [
+                {
+                  "internalType": "int256",
+                  "name": "",
+                  "type": "int256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "address",
+                  "name": "",
+                  "type": "address"
+                }
+              ],
+              "name": "users",
+              "outputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "ethbal",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "lnkbal",
+                  "type": "uint256"
+                }
+              ],
+              "stateMutability": "view",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "withdrawETH",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                {
+                  "internalType": "uint256",
+                  "name": "amount",
+                  "type": "uint256"
+                }
+              ],
+              "name": "withdrawLink",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            }
+          ]
+                
+     var linkContractAbi= 
+     ['function approve(address spender, uint256 amount) external returns (bool)',
+     'function transfer(address recipient, uint256 amount) external returns (bool)'
+      ]
+
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    var content = document.getElementById("content");
+
+    var ETHBal = document.getElementById("ETHBal");
+    var LNKBAL = document.getElementById("LNKBAL");
+
+    var ETHBalTOUSD= document.getElementById("ETHBalTOUSD");
+    var LNKBALTOUSD = document.getElementById("LNKBALTOUSD");
+
+    var depositETHf = document.getElementById("depositETHf");
+    var withdrawETHf = document.getElementById("withdrawETHf");
+    var depositLNKf = document.getElementById("depositLNKf");
+    var withdrawLNKf = document.getElementById("withdrawLNKf");
+
+    async function connectWallet () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const signer = provider.getSigner(); //getting user
+        const address = ethereum.selectedAddress;
+        const userBalance = await provider.getBalance(address);
+        console.log(address);
+        // content.innerHTML = userBalance;
+        addr.innerHTML = address;
+    
+
+      })
+    }
+
+    async function retrieveBalance () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const address = ethereum.selectedAddress;
+        const contract = new ethers.Contract(contractAddress, contractABI, provider);
+        // const ETHBalance = await provider.getBalance(address);
+        // const LNKBalance = await provider.getBalance(address);
+
+        let data = await contract.users(address);
+        ETHBal.innerHTML = 'ETH Balance: ' + ethers.utils.formatEther(data.ethbal) + ' ETH'
+        LNKBAL.innerHTML = 'LINK Balance: ' + ethers.utils.formatUnits(data.lnkbal, 18) + ' LINK'
+        console.log('ETH in USD: ' + ETHBal.innerHTML);
+        console.log('ETH in USD: ' + LNKBAL.innerHTML);
+    
+      })
+    }
+
+   
+
+  
+    async function depositETH () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const signer = provider.getSigner(); //getting user
+        const contract = new ethers.Contract(contractAddress, contractABI, provider);
+        const connectedContract = contract.connect(signer);
+        let store = await connectedContract.depositETH({value: ethers.utils.parseEther(depositETHf.value)});
+      })
+    }
+
+    async function withdrawETH () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const signer = provider.getSigner(); //getting user
+        const contract = new ethers.Contract(contractAddress, contractABI, provider);
+        const connectedContract = contract.connect(signer);
+        let store = await connectedContract.withdrawETH(ethers.utils.parseEther(withdrawETHf.value));
+      })
+    }
+
+    async function depositLink () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const signer = provider.getSigner(); //getting user
+
+        //original 
+      const contract = new ethers.Contract(contractAddress, contractABI, provider);
+      const connectedContract = contract.connect(signer);
+      let store = await connectedContract.depositLink(ethers.utils.parseUnits(depositLNKf.value, 18));
+        //original 
+
+       //changes for linkcontract
+       // const lnkcontract = new ethers.Contract(linkContractAddr, linkContractAbi, provider);
+        // console.log(this.linkContractAddr);
+       //changes for linkcontract
+
+        //changes for linkcontract
+       //const connectedContract = lnkcontract.connect(signer);
+       //changes for linkcontract
+
+        //changes for linkcontract
+        // let txRsp = await lnkcontract.approve(this.contractAddr, this.depositLNKf.value);
+        // let contractWallet = new ethers.Contract(this.contractAddr, this.contractAbi, this.signer);
+        // let store = await contractWallet.depositLink(ethers.utils.parseUnits(depositLNKf.value, 18));
+        //changes for linkcontract
+
+
+        console.log(e.message);
+        console.log(store);
+      })
+    }
+
+    async function withdrawLink () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const signer = provider.getSigner(); //getting user
+        const contract = new ethers.Contract(contractAddress, contractABI, provider);
+        const connectedContract = contract.connect(signer);
+        let store = await connectedContract.withdrawLink(ethers.utils.parseUnits(withdrawLNKf.value, 18));
+      })
+    }
+
+    async function retrieveBalanceInUsd () {
+      ethereum.request({method: 'eth_requestAccounts'})
+      .catch((error) => {
+        console.log(error);
+      })
+      .then(async () => {
+        const address = ethereum.selectedAddress;
+        const contract = new ethers.Contract(contractAddress, contractABI, provider);
+
+        let data = await contract.users(address);
+        let ethPrice = await contract.getlatestEthPrice();
+        let LinkPrice = await contract.getlatestLinkPrice();
+
+        let formattedEthUsd = ethers.utils.formatEther(data.ethbal)
+        let formattedLnkUsd = ethers.utils.formatUnits(data.lnkbal, 18)
+
+        let ETHTOUSD = ethers.utils.formatUnits(ethPrice, 8) * formattedEthUsd;
+        let LNKTOUSD = ethers.utils.formatUnits(LinkPrice, 8) * formattedLnkUsd ;
+
+        ETHBalTOUSD.innerHTML = 'ETH Balance (USD) : ' + ETHTOUSD + 'USD'
+        LNKBALTOUSD.innerHTML = 'LINK Balance (USD) : ' + LNKTOUSD + 'USD'
+      })
+   
+    }
+  </script>
+</body>
